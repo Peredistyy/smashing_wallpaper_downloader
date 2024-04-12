@@ -1,0 +1,77 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "bundler/setup"
+require "dry/cli"
+
+require "./lib/smashing_wallpaper_downloader"
+
+module Smashing
+  module CLI
+    module Commands
+      extend Dry::CLI::Registry
+
+      class Download < Dry::CLI::Command
+        desc "Download wallpapers"
+
+        option(
+          :year,
+          type: :string,
+          default: "2018",
+          values: (2010..Time.now.year).map(&:to_s),
+          desc: "Year (example: 2018)",
+        )
+        option(
+          :month,
+          type: :string,
+          default: "02",
+          values: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"],
+          desc: "Month (example: 02)",
+        )
+        option(
+          :resolution,
+          type: :string,
+          default: "640x480",
+          values: [
+            "320x480",
+            "640x480",
+            "800x480",
+            "800x600",
+            "1024x768",
+            "1024x1024",
+            "1152x864",
+            "1280x720",
+            "1280x800",
+            "1280x960",
+            "1280x1024",
+            "1366x768",
+            "1400x1050",
+            "1440x900",
+            "1600x1200",
+            "1680x1050",
+            "1680x1200",
+            "1920x1080",
+            "1920x1440",
+            "2560x1440",
+          ],
+          desc: "Resolution (example: 640x480)",
+        )
+
+        def call(**options)
+          scraper = ::Service::Scraper::Smashingmagazine.new
+          downloader = ::Service::Downloader.new
+
+          links = scraper.links(options[:year], options[:month], options[:resolution])
+
+          downloader.download_links(links) do |downloaded_file_name|
+            puts "[ OK ] ".colorize(color: :green, mode: :bold) + downloaded_file_name
+          end
+        end
+      end
+
+      register "download", Download
+    end
+  end
+end
+
+Dry::CLI.new(Smashing::CLI::Commands).call
